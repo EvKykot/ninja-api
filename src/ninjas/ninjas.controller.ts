@@ -13,10 +13,15 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { CreateNinjaDto, NinjaWeapon } from './dto/create-ninja.dto';
+import { CreateNinjaBodyDto } from './dto/create-ninja-body.dto';
 import { UpdateNinjaDto } from './dto/update-ninja.dto';
 import { NinjasService } from './ninjas.service';
 import { AuthGuard } from '../guards/auth/auth.guard';
+import { NinjaWeapon } from './types/ninja-weapon-enum';
+import { plainToInstance } from 'class-transformer';
+import { ResponseNinjaDto } from './dto/response-ninja.dto';
+import { NinjaMapper } from './mappers/ninja.mapper';
+import { StatusOkDto } from '../common/dto/status-ok.dto';
 
 @Controller('ninjas')
 @UseGuards(AuthGuard)
@@ -24,14 +29,16 @@ export class NinjasController {
   constructor(private readonly ninjasService: NinjasService) {}
 
   @Get()
-  getNinjas(@Query('weapon') weapon: NinjaWeapon) {
-    return this.ninjasService.getNinjas(weapon);
+  async findNinjas(@Query() weapon: NinjaWeapon) {
+    const ninjas = await this.ninjasService.findNinjas(weapon);
+    return ninjas.map((ninja) => plainToInstance(ResponseNinjaDto, ninja));
   }
 
   @Get(':id')
-  getOneNinja(@Param('id', ParseIntPipe) id: number) {
+  async getOneNinja(@Param('id', ParseIntPipe) id: string) {
     try {
-      return this.ninjasService.getNinja(id);
+      const ninja = await this.ninjasService.getNinja(id);
+      return plainToInstance(ResponseNinjaDto, ninja);
     } catch (error) {
       throw new NotFoundException();
     }
@@ -39,20 +46,24 @@ export class NinjasController {
 
   @Post()
   @UsePipes(new ValidationPipe())
-  createNinja(@Body() createNinjaDto: CreateNinjaDto) {
-    return this.ninjasService.createNinja(createNinjaDto);
+  async createNinja(@Body() createNinjaDto: CreateNinjaBodyDto) {
+    const input = NinjaMapper.fromDto(createNinjaDto);
+    const ninja = await this.ninjasService.createNinja(input);
+    return plainToInstance(ResponseNinjaDto, ninja);
   }
 
   @Put(':id')
-  updateNinja(
-    @Param('id', ParseIntPipe) id: number,
+  async updateNinja(
+    @Param('id', ParseIntPipe) id: string,
     @Body() updateNinjaDto: UpdateNinjaDto,
   ) {
-    return this.ninjasService.updateNinja(id, updateNinjaDto);
+    const ninja = await this.ninjasService.updateNinja(id, updateNinjaDto);
+    return plainToInstance(ResponseNinjaDto, ninja);
   }
 
   @Delete(':id')
-  deleteNinja(@Param('id', ParseIntPipe) id: number) {
-    return this.ninjasService.deleteNinja(id);
+  async deleteNinja(@Param('id', ParseIntPipe) id: number) {
+    await this.ninjasService.deleteNinja(id);
+    return plainToInstance(StatusOkDto, { status: 'success' });
   }
 }

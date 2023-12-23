@@ -8,8 +8,11 @@ import { NinjasController } from './ninjas.controller';
 import { NinjasService } from './ninjas.service';
 import { AuthorizationMiddleware } from 'src/middlewares/authorization/authorization.middleware';
 import { BeltLevelMiddleware } from 'src/middlewares/belt-level/belt-level.middleware';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NinjaEntity } from './models/ninja.entity';
 
 @Module({
+  imports: [TypeOrmModule.forFeature([NinjaEntity])],
   controllers: [NinjasController],
   providers: [NinjasService],
 })

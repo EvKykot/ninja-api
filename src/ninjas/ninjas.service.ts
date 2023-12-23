@@ -1,56 +1,48 @@
 import { Injectable } from '@nestjs/common';
-import { CreateNinjaDto, NinjaWeapon } from './dto/create-ninja.dto';
+import { CreateNinjaBodyDto } from './dto/create-ninja-body.dto';
 import { UpdateNinjaDto } from './dto/update-ninja.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { NinjaEntity } from './models/ninja.entity';
+import { Repository } from 'typeorm';
+import { NinjaWeapon } from './types/ninja-weapon-enum';
+import { CreateNinjaInput, Ninja } from './types/ninja-types';
+import { NinjaMapper } from './mappers/ninja.mapper';
 
 @Injectable()
 export class NinjasService {
-  private ninjas = [
-    { id: 0, name: 'NinajaA', weapon: NinjaWeapon.stars },
-    { id: 1, name: 'NinajaB', weapon: NinjaWeapon.nunchucks },
-  ];
+  constructor(
+    @InjectRepository(NinjaEntity)
+    private readonly ninjaRepository: Repository<NinjaEntity>,
+  ) {}
 
-  getNinjas(weapon?: NinjaWeapon) {
-    if (weapon) {
-      return this.ninjas.filter((item) => item.weapon === weapon);
-    }
-
-    return this.ninjas;
+  async findNinjas(weapon?: NinjaWeapon) {
+    if (!weapon) return this.ninjaRepository.find();
+    return this.ninjaRepository.find({ where: { weapon: weapon } });
   }
 
-  getNinja(id: number) {
-    const ninja = this.ninjas.find((item) => item.id === id);
+  async getNinja(id: string) {
+    const entity = await this.ninjaRepository.findOne({ where: { id } });
 
-    if (!ninja) {
-      throw new Error('Ninja not found');
-    }
+    if (!entity) throw new Error('Ninja not found');
 
-    return ninja;
+    return NinjaMapper.fromEntity(entity);
   }
 
-  createNinja(createNinjaDto: CreateNinjaDto) {
-    const newNinja = {
-      ...createNinjaDto,
-      id: Date.now(),
-    };
-
-    this.ninjas.push(newNinja);
-
-    return newNinja;
+  async createNinja(createNinjaInput: CreateNinjaInput): Promise<Ninja> {
+    const entity = await this.ninjaRepository.save(createNinjaInput);
+    return NinjaMapper.fromEntity(entity);
   }
 
-  updateNinja(id: number, updateNinjaDto: UpdateNinjaDto) {
-    this.ninjas = this.ninjas.map((item) => {
-      if (item.id !== id) return item;
-      return { ...item, ...updateNinjaDto };
-    });
-
-    return this.getNinja(id);
+  async updateNinja(
+    id: string,
+    updateNinjaDto: UpdateNinjaDto,
+  ): Promise<Ninja> {
+    await this.ninjaRepository.update(id, updateNinjaDto);
+    const entity = await this.ninjaRepository.findOne({ where: { id } });
+    return NinjaMapper.fromEntity(entity);
   }
 
-  deleteNinja(id: number) {
-    const toBeRemoved = this.getNinja(id);
-    this.ninjas = this.ninjas.filter((item) => item.id !== id);
-
-    return toBeRemoved;
+  async deleteNinja(id: number) {
+    await this.ninjaRepository.delete(id);
   }
 }

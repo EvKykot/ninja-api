@@ -1,4 +1,13 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateNinjaDto } from './create-ninja.dto';
+import { IsEnum, IsOptional, MaxLength, MinLength } from 'class-validator';
+import { NinjaWeapon } from '../types/ninja-weapon-enum';
 
-export class UpdateNinjaDto extends PartialType(CreateNinjaDto) {}
+export class UpdateNinjaDto {
+  @IsOptional()
+  @MinLength(2)
+  @MaxLength(100)
+  name?: string;
+
+  @IsOptional()
+  @IsEnum(NinjaWeapon, { message: 'Use correct weapon' })
+  weapon?: NinjaWeapon;
+}
